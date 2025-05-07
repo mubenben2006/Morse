@@ -1,0 +1,144 @@
+#include<iostream>
+using namespace std;
+
+char Alpha[128] = { 0,' ','E','T','I','A','N','M','S','U','R',
+'W','D','K','G','O','H','V','F',' ','L',' ','P','J','B','X','C',
+'Y','Z','Q' };
+
+struct BiNode
+{
+	char data;
+	BiNode* left;
+	BiNode* right;
+}*root = nullptr;
+
+struct CodeTable
+{
+	char data;
+	string code;
+}codetable[40];
+
+int Len = 0;  //编码表长度
+
+void GenMorseTree(BiNode*& R, char data[], int i, int n)
+{
+	if (i <= n)
+	{
+		R = new BiNode;
+		R->data = data[i];
+		R->left = nullptr;
+		R->right = nullptr;
+		GenMorseTree(R->left, data, 2 * i, n);
+		GenMorseTree(R->right, data, 2 * i + 1, n);
+	}
+}
+
+struct Queue
+{
+	BiNode* R;
+	string code;
+};
+
+void GenMorseCode(BiNode* R, int& Len)
+{
+	Queue q[100];
+	int f = -1, r = -1;
+
+	if (R != nullptr)  //处理根节点
+	{
+		q[++r].R = R;
+		q[r].code = "";
+	}
+
+	while (f != r)
+	{
+		BiNode* R = q[++f].R;
+		string code = q[f].code;
+		if (R->data != ' ' && R->data != 0)
+		{
+			codetable[Len].data = R->data;
+			codetable[Len].code = code;
+			Len++;
+		}
+		if (R->left != nullptr)
+		{
+			q[++r].R = R->left;
+			q[r].code = code + ".";
+		}
+		if (R->right != nullptr)
+		{
+			q[++r].R = R->right;
+			q[r].code = code + "-";
+		}
+	}
+}
+
+void PrintCodeTable(CodeTable codetable[],int Len)
+{
+	for (int i = 0; i < Len; i++)
+	{
+		cout << codetable[i].data << " " << codetable[i].code << '\t';
+	}
+	cout << endl;
+}
+
+void EnCode(string s)
+{
+	for (int i = 0; i < s.size(); i++)
+	{
+		for (int j = 0; j < Len; j++)
+		{
+			if (s[i] == codetable[j].data)
+			{
+				cout << codetable[j].code;
+				break;
+			}
+		}
+		if (s[i] == ' ') cout << "|";
+		if (s[i] != ' ' && s[i + 1] != ' ' && i != s.size() - 1) cout << " ";  //两个编码字符之间输出空格
+	}
+}
+
+void DeCode(string s)
+{
+	for (int i = 0; i < s.size(); i++)
+	{
+		char str[6];
+		int j = 0;
+		
+		while (s[i] != '\n' && s[i] != ' ' && s[i] != '\0' && s[i] != '|')
+		{
+			str[j++] = s[i++];
+		}
+		str[j] = '\0';
+		for (int k = 0; k < Len; k++)
+		{
+			if (str == codetable[k].code)
+				cout << codetable[k].data;
+		}
+		if (s[i] == '|')  cout << " ";
+		j = 0;
+		memset(str, 0, sizeof(str));
+	}
+}
+
+int main()
+{
+	GenMorseTree(root, Alpha, 1, 30);
+	GenMorseCode(root, Len);
+	PrintCodeTable(codetable, Len);
+
+	char ch[128];
+	string s;
+	cout << "请输入要编码的字符串，以#结尾" << endl;
+	cin.getline(ch, 128, '#');
+	s = ch;
+	EnCode(s);
+
+	cout << "\n请输入要解码的字符串，以#结尾" << endl;
+	cin.getline(ch, 128, '#');
+	s = ch;
+	DeCode(s);
+
+	return 0;
+}
