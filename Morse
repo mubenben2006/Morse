@@ -1,144 +1,265 @@
 #include<iostream>
 using namespace std;
 
-char Alpha[128] = { 0,' ','E','T','I','A','N','M','S','U','R',
-'W','D','K','G','O','H','V','F',' ','L',' ','P','J','B','X','C',
-'Y','Z','Q' };
+const int MAXSIZE = 10;
+const int MAX = 1000;
 
-struct BiNode
+struct graph
 {
-	char data;
-	BiNode* left;
-	BiNode* right;
-}*root = nullptr;
-
-struct CodeTable
-{
-	char data;
-	string code;
-}codetable[40];
-
-int Len = 0;  //编码表长度
-
-void GenMorseTree(BiNode*& R, char data[], int i, int n)
-{
-	if (i <= n)
-	{
-		R = new BiNode;
-		R->data = data[i];
-		R->left = nullptr;
-		R->right = nullptr;
-		GenMorseTree(R->left, data, 2 * i, n);
-		GenMorseTree(R->right, data, 2 * i + 1, n);
-	}
-}
-
-struct Queue
-{
-	BiNode* R;
-	string code;
+	int vexnum, arcnum;
+	string vexs[MAXSIZE];
+	int arcs[MAXSIZE][MAXSIZE];
 };
 
-void GenMorseCode(BiNode* R, int& Len)
+struct VEdge {
+	int fromV;
+	int endV;
+	int weight;
+};
+
+template<class T>class MGraph
 {
-	Queue q[100];
-	int f = -1, r = -1;
+public:
+	MGraph(graph g);
+	void Prim();
+	void Kruskal();
+	void Dijkstra(int v0);
+	void Floyd();
+	void GenSortEdge();
+private:
+	int vNum, arcNum;
+	int arc[MAXSIZE][MAXSIZE];
+	VEdge EdgeList[MAXSIZE * MAXSIZE];
+	T vertex[MAXSIZE];
+};
 
-	if (R != nullptr)  //处理根节点
+template<class T>MGraph<T>::MGraph(graph g)
+{
+	vNum = g.vexnum;
+	arcNum = g.arcnum;
+	for (int i = 0; i < vNum; i++)
 	{
-		q[++r].R = R;
-		q[r].code = "";
-	}
-
-	while (f != r)
-	{
-		BiNode* R = q[++f].R;
-		string code = q[f].code;
-		if (R->data != ' ' && R->data != 0)
-		{
-			codetable[Len].data = R->data;
-			codetable[Len].code = code;
-			Len++;
-		}
-		if (R->left != nullptr)
-		{
-			q[++r].R = R->left;
-			q[r].code = code + ".";
-		}
-		if (R->right != nullptr)
-		{
-			q[++r].R = R->right;
-			q[r].code = code + "-";
-		}
+		vertex[i] = g.vexs[i];
+		for (int j = 0; j < vNum; j++)
+			arc[i][j] = g.arcs[i][j];
 	}
 }
 
-void PrintCodeTable(CodeTable codetable[],int Len)
+template<class T>void MGraph<T>::Prim()
 {
-	for (int i = 0; i < Len; i++)
+	int lowcost[MAXSIZE] = { 0 }, adjvex[MAXSIZE] = { 0 };
+	for (int i = 0; i < vNum; i++)
 	{
-		cout << codetable[i].data << " " << codetable[i].code << '\t';
-	}
-	cout << endl;
-}
+		lowcost[i] = arc[0][i];
+		adjvex[i] = 0;
+	} 
 
-void EnCode(string s)
-{
-	for (int i = 0; i < s.size(); i++)
+	lowcost[0] = 0;
+	for (int i = 1; i < vNum; i++)
 	{
-		for (int j = 0; j < Len; j++)
+		int min = MAX, k = 0;
+		for (int j = 1; j < vNum; j++)
 		{
-			if (s[i] == codetable[j].data)
+			if (lowcost[j] < min && lowcost[j] != 0)
 			{
-				cout << codetable[j].code;
-				break;
+				min = lowcost[j];
+				k = j;
 			}
 		}
-		if (s[i] == ' ') cout << "|";
-		if (s[i] != ' ' && s[i + 1] != ' ' && i != s.size() - 1) cout << " ";  //两个编码字符之间输出空格
+		cout << vertex[adjvex[k]] << "->" << vertex[k] << " " << min << endl;
+		lowcost[k] = 0;
+		for (int j = 1; j < vNum; j++)
+			if (arc[k][j] < lowcost[j])
+			{
+				lowcost[j] = arc[k][j];
+				adjvex[j] = k;
+			}
 	}
 }
 
-void DeCode(string s)
+template<class T>void MGraph<T>::Kruskal()
 {
-	for (int i = 0; i < s.size(); i++)
+	GenSortEdge();
+	int parent[MAXSIZE] = { 0 };
+	for (int i = 0; i < vNum; i++)
+		parent[i] = i;
+	int k = 0, j = 0;
+	while (k < vNum - 1)
 	{
-		char str[6];
-		int j = 0;
-		
-		while (s[i] != '\n' && s[i] != ' ' && s[i] != '\0' && s[i] != '|')
+		VEdge e = EdgeList[j++];
+		int m = e.fromV, n = e.endV;
+		int s1 = parent[m], s2 = parent[n];
+		if (s1 != s2)
 		{
-			str[j++] = s[i++];
+			cout << vertex[m] << "->" << vertex[n] << " " << e.weight << endl;
+			k++;
+
+			for (int i = 0; i < vNum; i++)
+				if (parent[i] == s2)
+					parent[i] = s1;
 		}
-		str[j] = '\0';
-		for (int k = 0; k < Len; k++)
-		{
-			if (str == codetable[k].code)
-				cout << codetable[k].data;
-		}
-		if (s[i] == '|')  cout << " ";
-		j = 0;
-		memset(str, 0, sizeof(str));
 	}
 }
+
+template<class T>void MGraph<T>::Dijkstra(int v0)
+{
+	int dist[MAXSIZE], path[MAXSIZE];
+	bool s[MAXSIZE];
+	for (int i = 0; i < vNum; i++)
+	{
+		dist[i] = arc[v0][i];
+		if (dist[i] != MAX)
+			path[i] = v0;
+		else
+			path[i] = -1;
+		s[i] = false;
+	}
+	s[v0] = true;
+	dist[v0] = 0;
+	for (int i = 1; i < vNum; i++)
+	{
+		int min = MAX, k = 0;
+		for (int j = 1; j < vNum; j++)
+		{
+			if (!s[j] && dist[j] < min)
+			{
+				min = dist[j];
+				k = j;
+			}
+		}
+
+		if (min == MAX) break;
+		s[k] = true;
+		for (int j = 0; j < vNum; j++)
+			if (!s[j] && (min + arc[k][j]) < dist[j])
+			{
+				dist[j] = min + arc[k][j];
+				path[j] = k;
+			}
+	}
+	
+	for (int i = 0; i < vNum; i++)
+	{
+		cout << vertex[i] << ":" << dist[i] << "\t{"<<vertex[i];
+		int pre = path[i];
+		while (pre != -1)
+		{
+			cout << vertex[pre];
+			pre = path[pre];
+		}
+		cout << "}" << endl;
+	}
+}
+
+template<class T>void MGraph<T>::Floyd()
+{
+	int dist[MAXSIZE][MAXSIZE] = { 0 };
+	string path[MAXSIZE][MAXSIZE] = {"k"};
+	for (int i = 0; i < vNum; i++)
+		for (int j = 0; j < vNum; j++)
+		{
+			dist[i][j] = arc[i][j];
+			if (arc[i][j] != MAX)
+			{
+				path[i][j] = vertex[i] + vertex[j];
+		    }
+			else
+				path[i][j] = "k";
+		}
+
+	for (int k = 0; k < vNum; k++)
+		for (int i = 0; i < vNum; i++)
+			for (int j = 0; j < vNum; j++)
+				if ((dist[i][k] + dist[k][j]) < dist[i][j])
+				{
+					dist[i][j] = dist[i][k] + dist[k][j];
+					path[i][j] = path[i][k] + "->" +	path[k][j];
+				}
+	for (int i = 0; i < vNum; i++)
+		for (int j = 0; j < vNum; j++)
+			cout << path[i][j] << " " << dist[i][j] << endl;
+}
+
+template<class T>void MGraph<T>::GenSortEdge()
+{
+	int k = 0, i, j;
+	for(i=0;i<vNum;i++)
+		for (j = i; j < vNum; j++)
+			if (arc[i][j] != MAX)
+			{
+				EdgeList[k].fromV = i;
+				EdgeList[k].endV = j;
+				EdgeList[k].weight = arc[i][j];
+				k++;
+			}
+
+	for (i = 0; i < arcNum; i++)
+		for (j = i + 1; j < arcNum; j++)
+			if (EdgeList[i].weight > EdgeList[j].weight)
+			{
+				VEdge temp = EdgeList[i];
+				EdgeList[i] = EdgeList[j];
+				EdgeList[j] = temp;
+			}
+}
+
+graph g;
 
 int main()
-{
-	GenMorseTree(root, Alpha, 1, 30);
-	GenMorseCode(root, Len);
-	PrintCodeTable(codetable, Len);
+{ 
+	bool isDirected;
+	cout << "请输入图的顶点数和边数：";
+	cin >> g.vexnum >> g.arcnum;
+	cout << "请输入图的顶点：";
+	for (int i = 0; i < g.vexnum; i++)
+		cin >> g.vexs[i];
 
-	char ch[128];
-	string s;
-	cout << "请输入要编码的字符串，以#结尾" << endl;
-	cin.getline(ch, 128, '#');
-	s = ch;
-	EnCode(s);
+	cout << "请输入图的类型（0-无向图，1-有向图）：";
+	cin >> isDirected;
+	cout << "请输入图的边：(起点，终点，权值)" << endl;
 
-	cout << "\n请输入要解码的字符串，以#结尾" << endl;
-	cin.getline(ch, 128, '#');
-	s = ch;
-	DeCode(s);
+	if (isDirected)
+	{
+		for (int i = 0; i < g.arcnum; i++)
+		{
+			int v1, v2, w;
+			cin >> v1 >> v2 >> w;
+			g.arcs[v1][v2] = w;
+		}
+	}
+	else
+	{
+		for (int i = 0; i < g.arcnum; i++)
+		{
+			int v1, v2, w;
+			cin >> v1 >> v2 >> w;
+			g.arcs[v1][v2] = w;
+			g.arcs[v2][v1] = w;
+		}
+	}
+
+	for (int i = 0; i < g.vexnum; i++)
+		for (int j = 0; j < g.vexnum; j++)
+			if (g.arcs[i][j] == 0)
+				g.arcs[i][j] = MAX;
+
+	MGraph<string> mg(g);
+
+	if (!isDirected)
+	{
+		cout << "这是一个无向图" << endl;
+		cout << "Prim算法求最小生成树：" << endl;
+		mg.Prim();
+		cout << "Kruskal算法求最小生成树：" << endl;
+		mg.Kruskal();
+	}
+	cout << "Dijkstra算法求最短路径：" << endl;
+	int v0;
+	cout << "请输入起点：";
+	cin >> v0;
+	mg.Dijkstra(v0);
+	cout << "Floyd算法求最短路径：" << endl;
+	mg.Floyd();
 
 	return 0;
 }
